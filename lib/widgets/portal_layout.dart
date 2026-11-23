@@ -1,6 +1,8 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../theme/portal_theme.dart';
+import 'customer_assistant.dart';
+import 'customer_help_buttons.dart';
 
 class PortalScaffold extends StatelessWidget {
   const PortalScaffold({
@@ -16,6 +18,19 @@ class PortalScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= 760;
+    final history = CustomerHelpSession.historyOf(context);
+    final page = SingleChildScrollView(
+      padding: EdgeInsets.symmetric(
+        horizontal: wide ? 40 : 16,
+        vertical: wide ? 44 : 22,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxWidth),
+          child: child,
+        ),
+      ),
+    );
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -32,41 +47,11 @@ class PortalScaffold extends StatelessWidget {
           header: true,
           label: 'HAP North Coast',
           excludeSemantics: true,
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.waves_rounded, color: sea),
-              SizedBox(width: 9),
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    'HAP',
-                    style: TextStyle(
-                      fontFamily: 'serif',
-                      fontSize: 28,
-                      letterSpacing: 1.2,
-                      color: navy,
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(width: 10),
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    'NORTH COAST',
-                    style: TextStyle(
-                      fontSize: 10,
-                      letterSpacing: 1.8,
-                      fontWeight: FontWeight.w700,
-                      color: sea,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+          child: Image.asset(
+            'assets/images/New HAP Logo - Horizontal.jpeg',
+            height: wide ? 54 : 42,
+            fit: BoxFit.contain,
+            alignment: Alignment.centerLeft,
           ),
         ),
         actions: [
@@ -82,18 +67,37 @@ class PortalScaffold extends StatelessWidget {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(
-            horizontal: wide ? 40 : 16,
-            vertical: wide ? 44 : 22,
-          ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: maxWidth),
-              child: child,
-            ),
-          ),
-        ),
+        child: history == null
+            ? page
+            : LayoutBuilder(
+                builder: (context, bounds) {
+                  final help = CustomerHelpButtons(history: history);
+                  if (bounds.maxHeight < 150) return page;
+                  // Give the controls their own space so they never cover form actions.
+                  if (bounds.maxWidth >= 1040 ||
+                      (bounds.maxWidth >= 580 && bounds.maxHeight < 360)) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: bounds.maxHeight,
+                            child: page,
+                          ),
+                        ),
+                        help,
+                      ],
+                    );
+                  }
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(child: page),
+                      if (bounds.maxHeight >= 220) help,
+                    ],
+                  );
+                },
+              ),
       ),
     );
   }

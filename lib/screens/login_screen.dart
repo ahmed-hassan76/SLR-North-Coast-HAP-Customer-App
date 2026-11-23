@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../services/mock_auth_service.dart';
@@ -34,10 +33,10 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _fillDemo() {
-    _formKey.currentState!.reset();
+  void _useDemoCredentials() {
     _phone.text = MockAuthService.demoResident.phone;
     _password.text = MockAuthService.demoPassword;
+    _formKey.currentState!.validate();
     setState(() => _error = null);
   }
 
@@ -126,20 +125,20 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-                  const SizedBox(height: 24),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: TextButton(
+                      onPressed: _useDemoCredentials,
+                      child: const Text('Use Demo Credentials'),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   FilledButton.icon(
                     onPressed: _login,
                     iconAlignment: IconAlignment.end,
                     icon: const Icon(Icons.arrow_forward, size: 19),
                     label: const Text('Login'),
                   ),
-                  if (kDebugMode) ...[
-                    const SizedBox(height: 14),
-                    TextButton(
-                      onPressed: _fillDemo,
-                      child: const Text('Fill demo credentials'),
-                    ),
-                  ],
                 ],
               ),
             ),

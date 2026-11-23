@@ -1,6 +1,8 @@
+import 'package:customer_app/services/appointment_repository.dart';
 import 'package:customer_app/app/portal_app.dart';
 import 'package:customer_app/models/submissions.dart';
 import 'package:customer_app/services/mock_auth_service.dart';
+import 'package:customer_app/services/stay_repository.dart';
 import 'package:customer_app/services/submission_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -21,7 +23,14 @@ void main() {
     auth = MockAuthService();
     repository = SubmissionRepository(auth);
     if (loggedIn) auth.login('01000000000', 'Demo1234');
-    await tester.pumpWidget(PortalApp(auth: auth, repository: repository));
+    await tester.pumpWidget(
+      PortalApp(
+        auth: auth,
+        repository: repository,
+        appointments: AppointmentRepository(auth),
+        stays: StayRepository(auth),
+      ),
+    );
     await tester.pumpAndSettle();
   }
 
@@ -39,7 +48,7 @@ void main() {
       expect(find.text('Enter your phone number.'), findsOneWidget);
       expect(find.text('Enter your password.'), findsOneWidget);
       final fields = find.byType(TextFormField);
-      await tester.enterText(fields.first, '01000000000');
+      await tester.enterText(fields.first, '01000000001');
       await tester.enterText(fields.last, 'wrong');
       await tap(tester, find.byTooltip('Show password'));
       expect(
@@ -48,7 +57,12 @@ void main() {
       );
       await tap(tester, find.text('Login'));
       expect(find.text('Incorrect phone number or password.'), findsOneWidget);
-      await tester.enterText(fields.last, 'Demo1234');
+      await tap(tester, find.text('Use Demo Credentials'));
+      expect(auth.currentResident, isNull);
+      expect(find.text('Incorrect phone number or password.'), findsNothing);
+      final inputs = tester.widgetList<TextField>(find.byType(TextField));
+      expect(inputs.first.controller!.text, MockAuthService.demoResident.phone);
+      expect(inputs.last.controller!.text, MockAuthService.demoPassword);
       await tap(tester, find.text('Login'));
       expect(find.text('Welcome, Demo Resident'), findsOneWidget);
       await tap(tester, find.text('Start Survey'));
@@ -73,7 +87,8 @@ void main() {
         tester.getCenter(find.text('Resident Portal')).dx,
         lessThan(tester.getCenter(find.text('Welcome back')).dx),
       );
-      await tap(tester, find.text('Fill demo credentials'));
+      await tester.enterText(find.byType(TextFormField).first, '01000000000');
+      await tester.enterText(find.byType(TextFormField).last, 'Demo1234');
       await tap(tester, find.text('Login'));
       expect(find.text('Open Form'), findsOneWidget);
       expect(find.text('Start Survey'), findsOneWidget);
@@ -85,11 +100,22 @@ void main() {
     tester,
   ) async {
     await start(tester);
-    for (final route in ['/feedback', '/survey', '/home']) {
+    for (final route in [
+      '/feedback',
+      '/survey',
+      '/home',
+      '/plan-stay',
+      '/my-stays',
+      '/faq',
+      '/appointment',
+      '/my-appointments',
+    ]) {
       final navigator = tester.state<NavigatorState>(find.byType(Navigator));
       navigator.pushNamed<void>(route);
       await tester.pumpAndSettle();
       expect(find.text('Login'), findsOneWidget);
+      expect(find.text('AI Assistant'), findsNothing);
+      expect(find.text('Frequently Asked Questions'), findsNothing);
       expect(find.text('Submit Survey'), findsNothing);
       expect(find.text('Your Message'), findsNothing);
       expect(find.text('Open Form'), findsNothing);
