@@ -138,10 +138,13 @@ void main() {
       final submit = find.text('Submit');
       await tap(tester, submit);
       expect(find.text('Choose feedback or complaint.'), findsOneWidget);
+      expect(find.text('Choose a category.'), findsOneWidget);
       expect(find.text('Enter your message.'), findsOneWidget);
       expect(repository.feedback, isEmpty);
       await tap(tester, find.byType(DropdownButtonFormField<SubmissionType>));
       await tap(tester, find.text('Complaint').last);
+      await tap(tester, find.byType(DropdownButtonFormField<FeedbackCategory>));
+      await tap(tester, find.text('Maintenance').last);
       await tester.enterText(
         find.byType(TextFormField).last,
         'The gate needs repair.',
@@ -155,6 +158,8 @@ void main() {
         repository.feedback.single.status,
         SubmissionStatus.pendingFollowUp,
       );
+      expect(repository.feedback.single.category, FeedbackCategory.maintenance);
+      expect(repository.feedback.single.customCategory, isNull);
       expect(
         find.text(
           'Thank you for contacting us. Your submission has been received. If you reported a complaint, our team will contact you to follow up.',
@@ -163,6 +168,63 @@ void main() {
       );
       await tap(tester, find.text('Back to home'));
       expect(find.text('Welcome, Demo Resident'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Other needs a description, keeps it during edits and clears it when deselected',
+    (tester) async {
+      await start(tester, loggedIn: true, size: const Size(1280, 1000));
+      await tap(tester, find.text('Open Form'));
+      final dropdown = find.byType(DropdownButtonFormField<FeedbackCategory>);
+      final button = tester.widget<DropdownButton<FeedbackCategory>>(
+        find.byType(DropdownButton<FeedbackCategory>),
+      );
+      expect(button.value, isNull);
+      expect(button.items!.map((item) => (item.child as Text).data), [
+        'Beach',
+        'Cleanliness',
+        'Customer Service',
+        'Landscaping',
+        'Maintenance',
+        'Noise',
+        'Other',
+        'Parking',
+        'Security',
+        'Swimming Pool',
+        'Utilities',
+      ]);
+      final specify = find.byKey(const ValueKey('customCategory'));
+      expect(specify, findsNothing);
+      await tap(tester, find.byType(DropdownButtonFormField<SubmissionType>));
+      await tap(tester, find.text('Feedback').last);
+      await tap(tester, dropdown);
+      await tap(tester, find.text('Other').last);
+      await tester.enterText(specify, '   ');
+      await tap(tester, find.text('Submit'));
+      expect(find.text('Enter your category.'), findsOneWidget);
+      expect(find.text('Enter your message.'), findsOneWidget);
+      expect(repository.feedback, isEmpty);
+      await tester.enterText(specify, 'First description');
+      await tester.enterText(
+        find.byType(TextFormField).last,
+        'Please improve access.',
+      );
+      expect(
+        tester.widget<TextFormField>(specify).controller!.text,
+        'First description',
+      );
+      await tap(tester, dropdown);
+      await tap(tester, find.text('Beach').last);
+      expect(specify, findsNothing);
+      await tap(tester, dropdown);
+      await tap(tester, find.text('Other').last);
+      expect(tester.widget<TextFormField>(specify).controller!.text, isEmpty);
+      await tester.enterText(specify, '  Beach accessibility  ');
+      await tap(tester, find.text('Submit'));
+      expect(repository.feedback.single.customCategory, 'Beach accessibility');
+      expect(repository.feedback.single.message, 'Please improve access.');
+      expect(repository.feedback.single.followUpRequired, isFalse);
     },
   );
 

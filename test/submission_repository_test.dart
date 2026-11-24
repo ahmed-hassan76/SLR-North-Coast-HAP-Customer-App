@@ -36,7 +36,11 @@ void main() {
     login();
     auth.logout();
     expect(
-      () => repository.submitFeedback(SubmissionType.feedback, 'Test'),
+      () => repository.submitFeedback(
+        SubmissionType.feedback,
+        'Test',
+        category: FeedbackCategory.beach,
+      ),
       throwsStateError,
     );
     expect(() => repository.submitSurvey(all(Rating.good)), throwsStateError);
@@ -49,14 +53,22 @@ void main() {
     final complaint = repository.submitFeedback(
       SubmissionType.complaint,
       '  Broken gate  ',
+      category: FeedbackCategory.maintenance,
+      customCategory: 'ignored',
     );
     final feedback = repository.submitFeedback(
       SubmissionType.feedback,
       'Lovely gardens',
+      category: FeedbackCategory.other,
+      customCategory: '  Garden accessibility  ',
     );
     expect(complaint.followUpRequired, isTrue);
     expect(complaint.status.label, 'Pending Follow-up');
     expect(complaint.message, 'Broken gate');
+    expect(complaint.category, FeedbackCategory.maintenance);
+    expect(complaint.customCategory, isNull);
+    expect(feedback.category, FeedbackCategory.other);
+    expect(feedback.customCategory, 'Garden accessibility');
     expect(feedback.followUpRequired, isFalse);
     expect(feedback.status.label, 'Received');
     expect(complaint.id, isNot(feedback.id));
@@ -68,7 +80,11 @@ void main() {
   test('blank messages and incomplete surveys are rejected before saving', () {
     login();
     expect(
-      () => repository.submitFeedback(SubmissionType.feedback, '   '),
+      () => repository.submitFeedback(
+        SubmissionType.feedback,
+        '   ',
+        category: FeedbackCategory.beach,
+      ),
       throwsArgumentError,
     );
     expect(
@@ -79,6 +95,46 @@ void main() {
     );
     expect(repository.feedback, isEmpty);
     expect(repository.surveys, isEmpty);
+  });
+
+  test(
+    'Other requires a description of at most 100 characters before saving',
+    () {
+      login();
+      for (final description in [null, '', '   ', 'a' * 101]) {
+        expect(
+          () => repository.submitFeedback(
+            SubmissionType.feedback,
+            'Message',
+            category: FeedbackCategory.other,
+            customCategory: description,
+          ),
+          throwsArgumentError,
+        );
+      }
+      expect(repository.feedback, isEmpty);
+      final record = repository.submitFeedback(
+        SubmissionType.feedback,
+        'Message',
+        category: FeedbackCategory.other,
+        customCategory: 'a' * 100,
+      );
+      expect(record.customCategory, hasLength(100));
+    },
+  );
+
+  test('older feedback records are readable without a category', () {
+    final legacy = FeedbackSubmission(
+      'FB-1',
+      MockAuthService.demoResident,
+      DateTime.utc(2025),
+      type: SubmissionType.complaint,
+      message: 'Broken gate',
+    );
+    expect(legacy.message, 'Broken gate');
+    expect(legacy.status, SubmissionStatus.pendingFollowUp);
+    expect(legacy.category, isNull);
+    expect(legacy.customCategory, isNull);
   });
 
   test('all low ratings retain their questions and scores in a snapshot', () {

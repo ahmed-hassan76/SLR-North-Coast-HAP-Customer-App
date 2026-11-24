@@ -1,3 +1,5 @@
+import 'package:flutter/widgets.dart' show StringCharacters;
+
 import 'resident.dart';
 
 enum SubmissionType {
@@ -6,6 +8,34 @@ enum SubmissionType {
 
   const SubmissionType(this.label);
   final String label;
+}
+
+enum FeedbackCategory {
+  beach('Beach'),
+  cleanliness('Cleanliness'),
+  customerService('Customer Service'),
+  landscaping('Landscaping'),
+  maintenance('Maintenance'),
+  noise('Noise'),
+  other('Other'),
+  parking('Parking'),
+  security('Security'),
+  swimmingPool('Swimming Pool'),
+  utilities('Utilities');
+
+  const FeedbackCategory(this.label);
+  final String label;
+  static const customMaxLength = 100;
+
+  String? validateCustomCategory(String? value) {
+    if (this != other) return null;
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return 'Enter your category.';
+    if (text.characters.length > customMaxLength) {
+      return 'Use $customMaxLength characters or fewer.';
+    }
+    return null;
+  }
 }
 
 enum SubmissionStatus {
@@ -65,10 +95,15 @@ class FeedbackSubmission extends Submission {
     super.submittedAt, {
     required this.type,
     required this.message,
+    this.category,
+    this.customCategory,
   });
 
   final SubmissionType type;
   final String message;
+  // Submissions created before categories were introduced have no category.
+  final FeedbackCategory? category;
+  final String? customCategory;
 
   @override
   bool get followUpRequired => type == SubmissionType.complaint;

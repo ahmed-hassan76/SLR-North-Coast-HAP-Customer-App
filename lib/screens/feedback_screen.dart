@@ -22,19 +22,27 @@ class FeedbackScreen extends StatefulWidget {
 class _FeedbackScreenState extends State<FeedbackScreen> {
   final _formKey = GlobalKey<FormState>();
   final _message = TextEditingController();
+  final _customCategory = TextEditingController();
+  FeedbackCategory? _category;
   SubmissionType? _type;
   bool _submitted = false;
 
   @override
   void dispose() {
     _message.dispose();
+    _customCategory.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     if (_submitted || !_formKey.currentState!.validate()) return;
     setState(() => _submitted = true);
-    widget.repository.submitFeedback(_type!, _message.text);
+    widget.repository.submitFeedback(
+      _type!,
+      _message.text,
+      category: _category!,
+      customCategory: _customCategory.text,
+    );
     await confirmSubmission(
       context,
       'Thank you for contacting us. Your submission has been received. If you reported a complaint, our team will contact you to follow up.',
@@ -92,6 +100,44 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                     validator: (value) =>
                         value == null ? 'Choose feedback or complaint.' : null,
                   ),
+                  const SizedBox(height: 20),
+                  DropdownButtonFormField<FeedbackCategory>(
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Category',
+                      floatingLabelBehavior: FloatingLabelBehavior.always,
+                    ),
+                    hint: const Text('Select a category'),
+                    items: [
+                      for (final category in FeedbackCategory.values)
+                        DropdownMenuItem(
+                          value: category,
+                          child: Text(category.label),
+                        ),
+                    ],
+                    onChanged: (category) => setState(() {
+                      _category = category;
+                      if (category != FeedbackCategory.other) {
+                        _customCategory.clear();
+                      }
+                    }),
+                    validator: (value) =>
+                        value == null ? 'Choose a category.' : null,
+                  ),
+                  if (_category == FeedbackCategory.other) ...[
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      key: const ValueKey('customCategory'),
+                      controller: _customCategory,
+                      maxLength: FeedbackCategory.customMaxLength,
+                      decoration: const InputDecoration(
+                        labelText: 'Specify Category',
+                        hintText: 'Please specify your category',
+                        floatingLabelBehavior: FloatingLabelBehavior.always,
+                      ),
+                      validator: FeedbackCategory.other.validateCustomCategory,
+                    ),
+                  ],
                   const SizedBox(height: 20),
                   TextFormField(
                     controller: _message,

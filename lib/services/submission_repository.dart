@@ -17,18 +17,29 @@ class SubmissionRepository {
   Resident get _resident =>
       auth.currentResident ?? (throw StateError('Please log in to submit.'));
 
-  FeedbackSubmission submitFeedback(SubmissionType type, String message) {
+  FeedbackSubmission submitFeedback(
+    SubmissionType type,
+    String message, {
+    required FeedbackCategory category,
+    String? customCategory,
+  }) {
     final resident = _resident;
     final trimmed = message.trim();
     if (trimmed.isEmpty) {
       throw ArgumentError('Please enter a message.');
     }
+    final error = category.validateCustomCategory(customCategory);
+    if (error != null) throw ArgumentError(error);
     final submission = FeedbackSubmission(
       'FB-${_nextId++}',
       resident,
       DateTime.now().toUtc(),
       type: type,
       message: trimmed,
+      category: category,
+      customCategory: category == FeedbackCategory.other
+          ? customCategory!.trim()
+          : null,
     );
     _feedback.add(submission);
     return submission;
